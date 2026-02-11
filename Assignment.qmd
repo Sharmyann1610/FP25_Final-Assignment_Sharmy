@@ -1,26 +1,197 @@
 ---
-title: "Assigment"
+title: "Comparison of Covid-19 Policy Stringency in Norway & Sweden"
+author: "Sharmy Ann James"
 format: html
 editor: visual
 ---
 
-## Quarto
+## Introduction
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+During Covid-19 pandemic period Governments had to implement various policy measures to control the spread of the virus. During the pandemic, Norway & Sweden followed different approaches, particularly in how and when policies were tightened.
 
-## Running Code
+This project aims to examine how Norway and Sweden responded to the Covid-19 pandemic during normal periods and during periods of high healthcare system strain. The analysis focuses on policy stringency levels and how they changed when hospitals were under pressure.
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+Data : The data used in this project is from \*\***Covid-19 Data Hub**\*\* which provides Covid-19 related data publicly available. Policy Indicators are sourced from the \*\***Oxford Covid-19 Government Response Tracker(OxCGRT)**\*\*
+
+Dataset link: <https://covid19datahub.io/articles/docs.html#epidemiological-variables>
+
+## Data Import
+
+Importing the datasets for Norway and Sweden
 
 ```{r}
-1 + 1
+library(dplyr)
+library(ggplot2)
+Norway <- read.csv("NOR.csv")
+Sweden <- read.csv("SWE.csv")
+head(Norway)
+head(Sweden)
+str(Norway)
+str(Sweden)
+
+summary(Norway$stringency_index)
+summary(Sweden$stringency_index)
+Norway$stringency_index[Norway$stringency_index < 0] <- NA
+Sweden$stringency_index[Sweden$stringency_index < 0] <- NA
 ```
 
-You can add options to executable code like this
+Prior to analysis, some negative values in the stringency index were treated as missing values and removed. 
 
 ```{r}
-#| echo: false
-2 * 2
+Norway$Country <- "Norway"
+Sweden$Country <- "Sweden"
+#Combine datasets 
+merg_data <- rbind(Norway, Sweden)
+merg_data
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+This analysis spans the period from January 3, 2020, to December 31, 2022. The data includes daily observations with variables related to Government policy responses, healthcare indicators and dates.
+
+##Variable Selection
+
+Two primary variables are the focus of the analysis. Stringency index and Hospitalizations.
+
+**\*\*Stringency Index**\*\* : measures how strict Goverment policies were over time.
+
+**\*\*Hospitalizations (hosp)**\*\* : Used as an indicator of healthcare system strain.
+
+These variables were chosen because they are strongly related to policy responses and healthcare pressure during the covid-19 pandemic.
+
+```{r}
+names(Norway)
+names(Sweden)
+```
+
+## Sensitivity Analysis
+
+A simple sensitivity analysis is carried out to figure out whether the results are significantly affected by the concept of high healthcare strain.
+
+Three different thresholds based on higher hospitalization levels are investigated alongside the average threshold. 
+
+75th percentile
+
+```{r}
+#Using 75th percentile threshold
+p75_threshold <- tapply(merg_data$hosp, merg_data$Country, quantile, probs=0.75, na.rm=TRUE)
+p75_threshold
+```
+
+85th percentile
+
+```{r}
+#Using 85th percentile threshold
+p85_threshold <- tapply(merg_data$hosp, merg_data$Country, quantile, probs=0.85, na.rm=TRUE)
+p85_threshold 
+```
+
+90th percentile
+
+```{r}
+#Using 90th percentile threshold
+p90_threshold <- tapply(merg_data$hosp, merg_data$Country, quantile, probs=0.90, na.rm=TRUE)
+p90_threshold 
+```
+
+Hospitalization thresholds have been calculated separately for Norway and Sweden in order to investigate how government policy strictness reacts to healthcare pressure. Days were categorized into normal and high-strain periods using the 75th percentile of hospitalization levels as the primary benchmark.
+
+High-strain periods were defined as days with hospitalization values above the country-specific 75th percentile and normal periods were classified as days below this threshold. This categorization makes it possible to compare average policy stringency between periods when healthcare pressure was lower and higher.
+
+To assess the robustness of the findings, alternative thresholds at the 85th and 90th percetiles were determined. However, the 75th percentile was used for the main analysis because it maintains enough observations in all groups and offers a balanced definition of elevated healthcare strain.
+
+## Creating strain variable to compare policy stringency
+
+```{r}
+merg_data$strain_level_75 <- ifelse(
+  merg_data$Country == "Norway" & merg_data$hosp > p75_threshold["Norway"] |
+  merg_data$Country == "Sweden" & merg_data$hosp > p75_threshold["Sweden"],
+  "High-strain",
+  "Normal"
+)
+merg_data$strain_level_75
+
+#Number of high-strain vs normal days
+table(merg_data$strain_level_75)
+
+#Average stringency overall by Country
+tapply(merg_data$stringency_index,
+       merg_data$Country,
+       mean, na.rm=TRUE)
+
+```
+
+High-strain period is considered as days where the strain variable exceeded the 75th percentile threshold. 
+
+##Policy Stringency During Normal and High-Strain periods
+
+To compare the levels of policy stringency between normal and high-strain periods in Norway & Sweden, descriptive statistics were calculated. The mean, standard deviation and number of days for each country and strain level are calculated. This provides a basic summary of how policy strictness differed across conditions. 
+
+```{r}
+
+summary_stringency75 <- tapply(
+  merg_data$stringency_index,
+  list(merg_data$Country, merg_data$strain_level_75),
+  function(x) c(
+    Mean = mean(x, na.rm=TRUE),
+    SD = sd(x, na.rm=TRUE),
+    Number_of_days = length(x)
+  )
+)
+summary_stringency75
+
+summary_stringency75["Norway", ]
+summary_stringency75["Sweden", ]
+
+```
+
+## Mean stringency
+Before creating the visualization, I determined the average stringency index for Norway & Sweden during normal and high-strain periods. This allows me to show the variations in the graph and makes it easier to compare how strict the policies were in each case.
+
+```{r}
+mean_stringency_75P <- tapply(
+  merg_data$stringency_index,
+  list(merg_data$Country, merg_data$strain_level_75),
+  mean,
+  na.rm=TRUE
+)
+
+```
+
+## Visualization
+A slopegraph was created to better visualize the differences in policy responses. The average stringency index for Sweden and Norway during normal and high-strain periods are displayed in this graph. The slope of each line illustrates whether policy stringency increased or decreased  in response to greater healthcare pressure. 
+
+```{r}
+Norway_means <- c(
+  mean_stringency_75P["Norway", "Normal"],
+  mean_stringency_75P["Norway", "High-strain"]
+)
+Sweden_means <- c(
+  mean_stringency_75P["Sweden", "Normal"],
+  mean_stringency_75P["Sweden", "High-strain"]
+)
+plot(1:2, Norway_means,
+  type = "o",
+  col = "blue",
+  ylim = c(30,60),
+  xaxt = "n",
+  xlab = "Period",
+  ylab = "Average Stringency Index",
+  main = "Policy Stringency During Normal & High-Strain Periods")
+
+lines(1:2, Sweden_means, type="o", col="red" )
+
+axis(1, at=1:2, labels = c("Normal", "High-strain"))
+
+legend("topleft", 
+       legend=c("Norway", "Sweden"),
+       col=c("blue", "red"),
+       lty=1,
+       pch=1)
+```
+
+The slopegraph shows average policy stringency levels in Norway & Sweden during normal and high-strain periods. During high-strain periods Norway shows a small decrease in stringency, reflecting a relatively stable policy approach. On the other hand, Sweden shows a large increase in stringency during high-strain periods. This indicates that Sweden tightened policies as healthcare pressure increased, suggesting a more reactive approach, but Norway maintained more consistent policy levels throughout time. 
+
+## Conclusion
+This project compared how Sweden & Norway modified strictness of their Covid-19 policies during normal and high-strain periods. 
+According to the results, Norway maintained stable policy levels across both periods. On the other hand Sweden increased policy stringency during high-strain period. 
+This implies that Norway had a more consistent approach but Sweden's policies seemed to be more reactive to healthcare pressure. 
+
