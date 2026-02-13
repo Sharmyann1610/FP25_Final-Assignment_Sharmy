@@ -19,12 +19,11 @@ Dataset link: <https://covid19datahub.io/articles/docs.html#epidemiological-vari
 
 Importing the datasets for Norway and Sweden
 
-```{r setup, message=FALSE, warning=FALSE}
+```{r  setup, message=FALSE, warning=FALSE}
 library(dplyr)
 library(ggplot2)
 Norway <- read.csv("NOR.csv")
 Sweden <- read.csv("SWE.csv")
-
 summary(Norway$stringency_index)
 summary(Sweden$stringency_index)
 Norway$stringency_index[Norway$stringency_index < 0] <- NA
