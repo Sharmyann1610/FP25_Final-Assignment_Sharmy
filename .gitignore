@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 Assignment_files/libs/
+.httr-oauth
+.DS_Store
+.quarto

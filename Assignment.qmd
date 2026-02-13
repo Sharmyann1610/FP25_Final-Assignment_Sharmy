@@ -19,15 +19,11 @@ Dataset link: <https://covid19datahub.io/articles/docs.html#epidemiological-vari
 
 Importing the datasets for Norway and Sweden
 
-```{r}
+```{r setup, message=FALSE, warning=FALSE}
 library(dplyr)
 library(ggplot2)
 Norway <- read.csv("NOR.csv")
 Sweden <- read.csv("SWE.csv")
-head(Norway)
-head(Sweden)
-str(Norway)
-str(Sweden)
 
 summary(Norway$stringency_index)
 summary(Sweden$stringency_index)
@@ -42,7 +38,6 @@ Norway$Country <- "Norway"
 Sweden$Country <- "Sweden"
 #Combine datasets 
 merg_data <- rbind(Norway, Sweden)
-merg_data
 ```
 
 This analysis spans the period from January 3, 2020, to December 31, 2022. The data includes daily observations with variables related to Government policy responses, healthcare indicators and dates.
@@ -107,7 +102,6 @@ merg_data$strain_level_75 <- ifelse(
   "High-strain",
   "Normal"
 )
-merg_data$strain_level_75
 
 #Number of high-strain vs normal days
 table(merg_data$strain_level_75)
@@ -136,7 +130,6 @@ summary_stringency75 <- tapply(
     Number_of_days = length(x)
   )
 )
-summary_stringency75
 
 summary_stringency75["Norway", ]
 summary_stringency75["Sweden", ]
@@ -153,21 +146,24 @@ mean_stringency_75P <- tapply(
   mean,
   na.rm=TRUE
 )
+Norway_means <- c(
+  mean_stringency_75P["Norway", "Normal"],
+  mean_stringency_75P["Norway", "High-strain"]
+)
+Norway_means
 
+Sweden_means <- c(
+  mean_stringency_75P["Sweden", "Normal"],
+  mean_stringency_75P["Sweden", "High-strain"]
+)
+Sweden_means
 ```
 
 ## Visualization
 A slopegraph was created to better visualize the differences in policy responses. The average stringency index for Sweden and Norway during normal and high-strain periods are displayed in this graph. The slope of each line illustrates whether policy stringency increased or decreased  in response to greater healthcare pressure. 
 
 ```{r}
-Norway_means <- c(
-  mean_stringency_75P["Norway", "Normal"],
-  mean_stringency_75P["Norway", "High-strain"]
-)
-Sweden_means <- c(
-  mean_stringency_75P["Sweden", "Normal"],
-  mean_stringency_75P["Sweden", "High-strain"]
-)
+
 plot(1:2, Norway_means,
   type = "o",
   col = "blue",
